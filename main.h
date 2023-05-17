@@ -14,9 +14,6 @@
 
 #ifdef __linux__
 	#include <sys/wait.h>
-#else
-	int fork() { return (0); }
-	void wait(__attribute((unused)) int *wstate) {}
 #endif
 
 #define max(a, b) (((a) >= (b)) ? (a) : (b))
