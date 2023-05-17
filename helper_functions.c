@@ -33,22 +33,23 @@ char *str_resize(char **str_adr, size_t size, size_t n)
  */
 ssize_t _getline(char **lineptr, size_t *n, FILE *stream)
 {
-	size_t read_bytes = 0;
-	char *line, EOF_byte[1];
+	size_t read_bytes = 0, read_val;
+	char *line;
+	bool EOF_flag = false;
 
 	if (stream == stdin)
 	{
 		line = malloc(1), line[0] = '\0';
 		do {
 			str_resize(&line, read_bytes, BUF_SIZE);
-			read_bytes += read(STDIN_FILENO, line + read_bytes, BUF_SIZE);
-			if (line[read_bytes - 1] != '\n')
-			{
-				read(STDIN_FILENO, EOF_byte, 1);
-				if (EOF_byte[0] == '\0')
-					break;
-				line[read_bytes++] = EOF_byte[0];
-			}
+			read_val = read(STDIN_FILENO, line + read_bytes, BUF_SIZE);
+			/*
+			_puti(line[read_bytes]);
+			_puti(read_bytes);
+			*/
+			if ((EOF_flag = (read_val == 0)))
+				break;
+			read_bytes += read_val;
 		} while (line[read_bytes - 1] != '\n');
 
 		if (read_bytes < *n)
@@ -65,5 +66,7 @@ ssize_t _getline(char **lineptr, size_t *n, FILE *stream)
 		}
 	}
 	*n = read_bytes;
+	if (EOF_flag)
+		return (EOF);
 	return (read_bytes);
 }

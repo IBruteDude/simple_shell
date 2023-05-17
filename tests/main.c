@@ -1,18 +1,6 @@
 #include "../main.h"
 
 /**
- * sighand - handle the ^C signal (optional not a task)
- * @sig: passed signal argument
- */
-void sighand(int sig)
-{
-	if (sig == SIGINT)
-	{
-		write(STDOUT_FILENO, "YOOOOOOWAIT\n", 12);
-		interactive_mode(0, NULL, NULL);
-	}
-}
-/**
  * main - Entry point to the shell program
  * @argc: number of input arguments
  * @argv: passed input arguments

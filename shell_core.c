@@ -1,5 +1,10 @@
 #include "main.h"
 
+#ifndef __linux
+	int fork() { return (0); }
+	void wait(__attribute((unused)) int *wstate) {}
+	#define WEXITSTATUS(a) a
+#endif
 /**
  * get_args - receive valid input arguments from the command line
  * @args_line_adr: the address to store the args line
@@ -8,15 +13,26 @@
  */
 int get_args(char **args_line_adr, int *args_len_adr)
 {
-	int args_len = 1, command_len = BUF_SIZE, lines_read = 0, parse_stat = 0;
+	bool EOF_flag = false;
+	int args_len = 1, lines_read = 0, parse_stat = 0;
+	size_t command_len = BUF_SIZE, temp_len;
 	char *command_line = malloc(BUF_SIZE + 1);
 
 	*args_line_adr = malloc(1);
 	write(STDOUT_FILENO, PROMPT, sizeof(PROMPT) - 1);
 	do {
-		_getline(&command_line, (size_t *)&command_len, stdin);
-		lines_read++;
-		str_resize(args_line_adr, args_len, command_len - args_len);
+		temp_len = command_len;
+		EOF_flag = _getline(&command_line, &command_len, stdin) == EOF;
+		if (EOF_flag)
+		{
+			if (command_len == 0)
+				free(command_line), free(*args_line_adr),
+				_putchar('\n'), exit(EXIT_SUCCESS);
+			command_len = temp_len - command_len;
+			/* EOF_flag = _getline(&command_line + temp_len, &command_len, stdin) == EOF; */
+		}
+		if (!EOF_flag)
+			lines_read++, str_resize(args_line_adr, args_len, command_len - args_len);
 		parse_stat = process_args(command_line, *args_line_adr, &args_len);
 		if (parse_stat == LINE_ERROR)
 			write(STDOUT_FILENO, "> ", 2);
@@ -56,6 +72,26 @@ int parse_exec_args(char ***argv_adr, int *argc_adr)
 }
 
 /**
+ * signal_handle - handle the ^C signal
+ * @sig: passed signal argument
+ */
+void signal_handle(int sig)
+{
+	switch(sig)
+	{
+	case SIGINT:
+		_putchar('\n');
+		write(STDOUT_FILENO, PROMPT, sizeof(PROMPT) - 1);
+		break;
+	case SIGTERM:
+		exit(0);
+	#ifdef __linux__
+	case SIGKILL:
+		_exit(0);
+	#endif
+	}
+}
+/**
  * interactive_mode - the shell interactive mode REPL
  * @argc: number of input arguments
  * @argv: passed input arguments
@@ -70,6 +106,7 @@ int interactive_mode(__attribute__((unused)) int argc,
 
 	while (1)
 	{
+		signal(SIGINT, signal_handle);
 		exec_argc = arg_stat = 0;
 		lines_read += parse_exec_args(&exec_argv, &exec_argc);
 		arg_stat = check_built_in_commands(exec_argc, exec_argv, env);
@@ -85,7 +122,7 @@ int interactive_mode(__attribute__((unused)) int argc,
 				{
 					arg_stat = 0;
 					arg_stat = execve(exec_argv[0],
-									(char *const*)exec_argv, (char *const*)env);
+									(const char *const*)exec_argv, (const char *const*)env);
 					free(exec_argv[0]), free(exec_argv);
 					if (arg_stat == -1)
 						exit(FAILURE);
@@ -97,10 +134,10 @@ int interactive_mode(__attribute__((unused)) int argc,
 					perror("Error: forking failed");
 			}
 		}
+		if (arg_stat == FAILURE && exec_argv[0][0] != '\0')
+			_puts(argv[0]), simple_print(": %d: %s: No such file or directory\n",
+				lines_read, exec_argv[0]);
 		free(exec_argv[0]), free(exec_argv);
-		if (arg_stat == FAILURE)
-			simple_print("%s: %d: No such file or directory\n",
-				lines_read, argv[0]);
 	}
 	exit(EXIT_SUCCESS);
 }
