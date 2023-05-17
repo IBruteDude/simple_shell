@@ -1,14 +1,6 @@
 #include "main.h"
 #include <string.h>
 
-#define PROMPT		">>>$ "
-#define ARG_MAX		32
-#define BUF_SIZE	1024
-#define SUCCESS		0
-#define READ_ERROR	1
-#define CRITICAL	2
-
-
 /**
  * process_args - processes special characters
  * @raw_input: the raw stdin read input
