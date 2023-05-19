@@ -40,6 +40,8 @@ int sepPath(char **argv, char **file, char **environ, int count);
 int search_command(char **argv, char *file, char **environ, int count);
 void print_num(int number);
 void error(char *file, char *argv, int count ,char *message);
+void errorex(char *file, char **argv, int count, char *message);
+int exitP(char *s, char **argv, char *file, char **environ, int count, int out);
 
 #define PROMPT		"$ "
 #define BUF_SIZE	1024
