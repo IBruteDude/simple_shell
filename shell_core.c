@@ -19,15 +19,21 @@ int get_args(char **args_line_adr, int *args_len_adr,
 
 	args_line = malloc(1), command_line = malloc(BUF_SIZE);
 	*args_line = *command_line = '\0';
-	if (stream == stdin)
+	if (isatty(stream->_file))
 		write(STDOUT_FILENO, PROMPT, sizeof(PROMPT) - 1);
 	do {
-		EOF_flag = _getline(&command_line, &command_len, stream) == EOF;
-		if (EOF_flag && command_len == 0)
+		EOF_flag = (getline(&command_line, &command_len, stream) == EOF);
+		if (EOF_flag && command_len == BUF_SIZE)
+		{
+			if (isatty(stream->_file))
+				_putchar('\n');
 			free(command_line), free(args_line),
-			_putchar('\n'), shell_free(EXIT_SUCCESS, NULL);
+			shell_free(EXIT_SUCCESS, NULL);
+		}
 		else
+		{
 			lines_read++;
+		}
 		str_resize(&args_line, args_len, BUF_SIZE);
 		replace_aliases(&command_line, &command_len);
 		parse_stat = replace_variables(&command_line, &command_len);
@@ -36,7 +42,7 @@ int get_args(char **args_line_adr, int *args_len_adr,
 		else
 			parse_stat = process_args(command_line, args_line, &args_len);
 		if ((parse_stat == LINE_ERROR || parse_stat == BAD_SUB) && !EOF_flag)
-			write(STDOUT_FILENO, "> ", (stream == stdin) ? 2 : 0);
+		 	write(STDOUT_FILENO, "> ", (isatty(stream->_file)) ? 2 : 0);
 	} while ((parse_stat == LINE_ERROR || parse_stat == BAD_SUB) && !EOF_flag);
 	if (EMPTY_COMMAND(command_line))
 		parse_stat = PERM_DENY;

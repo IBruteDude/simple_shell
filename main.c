@@ -44,7 +44,7 @@ int main(int argc, const char *argv[], const char *env[])
 		}
 		fd_wrapper._file = fd;
 		if ((fd_wrapper._file))
-		reading_file = &fd_wrapper;
+		reading_file = fopen(argv[1], "r")/* &fd_wrapper */;
 		if (_getenv("SHLVL") != NULL)
 		{
 			SHLVL = str_to_int(_getenv("SHLVL"));
