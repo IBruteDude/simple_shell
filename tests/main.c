@@ -40,7 +40,7 @@ int main(int argc, const char *argv[], const char *env[])
 			error_msg = fmt_string("%s: %d: cannot open %s: No such file\n",
 					argv[0], 0, argv[1]);
 			write(STDERR_FILENO, error_msg, _strlen(error_msg));
-			free(error_msg), free(file_path), shell_free(2, NULL); 
+			free(error_msg), free(file_path), shell_free(2, NULL);
 		}
 		fd_wrapper._file = fd;
 		if ((fd_wrapper._file))
@@ -52,8 +52,6 @@ int main(int argc, const char *argv[], const char *env[])
 			_setenv("SHLVL", shell_level, 1);
 			free(shell_level);
 		}
-	}	
-
-
+	}
 	return (shell_main_process(argv, reading_file));
 }
