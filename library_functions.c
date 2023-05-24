@@ -1,4 +1,4 @@
-#include "main.h"
+#include "shell.h"
 
 /**
  * _strlen - find the length of a string
@@ -58,4 +58,19 @@ void *_memcpy(void *dest, const void *src, size_t n)
 	for (i = 0; i < n; i++)
 		dest_ptr[i] = src_ptr[i];
 	return (dest);
+}
+/**
+ * _strchr - find the address of a char inside a string
+ * @s: input string
+ * @c: specified char
+ * Return: address of the found char, or NULL if not found
+ */
+char *_strchr(const char *s, int c)
+{
+	size_t i = 0;
+
+	while (s[i] != '\0')
+		if (s[i++] == c)
+			return ((char *)(s + i - 1));
+	return (NULL);
 }

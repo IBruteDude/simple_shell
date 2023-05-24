@@ -1,7 +1,7 @@
-#include "main.h"
+#include "shell.h"
 
 /**
- * printnumber - print a number.
+ * print_num - print a number.
  * @number: number to print.
  */
 void print_num(int number)
@@ -33,14 +33,53 @@ void print_num(int number)
 	}
 }
 
-void error(char *file, char *argv, int count ,char *message)
+/**
+ * error - handles shell error status and stores it the $? variable
+ *
+ * @exec_stat: the execution status of the last command
+ * @lines_read: the number of lines read by the shell
+ * @argv: the shell program argv array
+ * @exec_argv: the last command passed arguments array
+ */
+void error(int exec_stat, int lines_read, const char **argv, char **exec_argv)
 {
-    putchar(file);
-    write(STDOUT_FILENO, ": ", 2);
-    print_num(count);
-    write(STDOUT_FILENO, ": ", 2);
-    putchar(argv);
-    write(STDOUT_FILENO, ": ", 2);
-    putchar(message);
-    write(STDOUT_FILENO, "\n", 1);
+	char *err;
+
+	switch (exec_stat)
+	{
+	case FAILURE:
+		err = fmt_string("%s: %d: %s: not found\n",
+			argv[0], lines_read, exec_argv[0]), _setenv("?", "127", 1);
+		break;
+	case EOF_FAIL:
+		err = fmt_string("%s: %d: Syntax error: Unterminated quoted string\n",
+			argv[0], lines_read), _setenv("?", "2", 1);
+		break;
+	case PERM_DENY:
+		err = fmt_string("%s: %d: %s: Permission denied\n",
+			argv[0], lines_read, exec_argv[0]), _setenv("?", "127", 1);
+		break;
+	case BAD_SUB:
+		err = fmt_string("%s: %d: Bad substitution\n",
+			argv[0], lines_read), _setenv("?", "2", 1);
+		break;
+	case ILL_NUM:
+		err = fmt_string("%s: %d: %s: Illegal number: %s\n",
+			argv[0], lines_read, exec_argv[0], exec_argv[1]);
+		_setenv("?", "2", 1);
+		break;
+	case ALIAS_ERROR:
+		err = fmt_string("%s: %s not found\n",
+			exec_argv[0], exec_argv[1]), _setenv("?", "1", 1);
+		break;
+	case CMD_LEN:
+		err = fmt_string("%s: %d: %s: File name too long\n",
+			argv[0], lines_read, exec_argv[0]), _setenv("?", "127", 1);
+		break;
+	default:
+		err = int_to_str(exec_stat);
+		_setenv("?", err, 1), free(err);
+		err = _strdup("");
+	}
+	write(STDERR_FILENO, err, _strlen(err)), free(err);
 }

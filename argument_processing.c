@@ -1,109 +1,125 @@
-#include "main.h"
+#include "shell.h"
 
 /**
  * process_args - processes special characters
- * @raw_input: the raw stdin read input
- * @cmd_line: the null-separated arguments string
+ * @cmd_line: the raw stdin read input
+ * @args_line: the null-separated arguments string
  * @len_adr: the address to store the number of arguments
- * Return: exit status (0 on success, 1 on wrong input, -1 on critical failure)
+ * Return: exit status
  */
-int process_args(const char *raw_input, char *cmd_line, int *len_adr)
+int process_args(const char *cmd_line, char *args_line, int *len_adr)
 {
 	static bool escaped, doub_q, sing_q;
-	char c;
-	int size, read_idx = 0, write_idx = *len_adr - 1;
+	int c, stat = FAILURE, r_idx = 0, w_idx = *len_adr - 1;
 
-	size = _strlen(raw_input);
-	while (read_idx < size)
-		switch (c = raw_input[read_idx++])
+	while (1)
+		switch (c = cmd_line[r_idx++])
 		{
-		case ' ':
-			cmd_line[write_idx++] = (escaped || doub_q || sing_q) ? c : '\0';
+		case ' ': case '\t':
+			args_line[w_idx++] = (escaped || doub_q || sing_q) ? c : '\0';
 			escaped = false;
-			while (raw_input[read_idx] == ' ')
-				read_idx++;
+			while (cmd_line[r_idx] == ' ')
+				r_idx++;
 			break;
 		case '\\':
-			escaped = !escaped; /* escape switch */
+			IFELSE(escaped || sing_q,
+				(args_line[w_idx++] = c, escaped = false),
+				escaped = (sing_q) ? escaped : !escaped);/* escape switch */
 			break;
 		case '\"':
-			if (escaped || sing_q)
-				cmd_line[write_idx++] = c, escaped = false;
-			else
-				doub_q = !doub_q;
+			IFELSE(escaped || sing_q,
+				(args_line[w_idx++] = c, escaped = false),
+				doub_q = !doub_q);
 			break;
 		case '\'':
-			if (escaped || doub_q)
-				cmd_line[write_idx++] = c, escaped = false;
-			else
-				sing_q = !sing_q;
+			IFELSE(escaped || doub_q,
+				(args_line[w_idx++] = c, escaped = false),
+				sing_q = !sing_q);
 			break;
 		case '\n': case '\0': case '#': /* handle comments too */
-			cmd_line[write_idx] = '\0';
-			*len_adr = write_idx + 1;
-			if (escaped || sing_q || doub_q) /* handle unterminated input */
-				return (LINE_ERROR);
-			return (SUCCESS);
+			IFELSE(sing_q || doub_q || escaped,
+				(stat = 2, escaped = false, args_line[w_idx++] = c), stat = 0);
+			if (c == '\0'/* EOF */)
+				sing_q = doub_q = false;
+			args_line[w_idx] = '\0';
+			*len_adr = w_idx + 1;
+			return (stat);
 		default:
-			cmd_line[write_idx++] = c, escaped = false;
+			args_line[w_idx++] = c, escaped = false;
 		}
-	cmd_line[write_idx] = '\0';
-	return (LINE_ERROR);
+	args_line[w_idx] = '\0';
+	return (stat);
 }
 
 /**
- * check_built_in_commands - checks & executes found built-in shell commands
- * @argc: number of passed arguments
- * @argv: the passed arguments array
- * @env: the environment variables array
- * Return: 0 if executed successfully, -1 if an error was encountered
+ * parse_args - parses the command line arguments into argv array
+ * @args_line: the input null-separated arguments line
+ * @args_len: the length of the arguments line
+ * @argv_adr: the address to store the parsed arguments
+ * @argc_adr: the address to store the number of arguments
  */
-int check_built_in_commands(int argc, char **argv, const char **env)
+void parse_args(char *args_line, int args_len, char ***argv_adr, int *argc_adr)
 {
-	if (_strcmp(argv[0], "exit") == SUCCESS)
-	{
-		free(argv[0]), free(argv);
-		if (argc == 1)
-			exit(EXIT_SUCCESS);
-		/* handle exit arguments */
-	}
-	else if (_strcmp(argv[0], "env") == SUCCESS)
-	{
-		int i;
+	int argc, i, j;
+	char **argv;
 
-		for (i = 0; env[i] != NULL; i++)
-			_puts(env[i]), _putchar('\n');
-		return (0);
+	for (argc = i = 0; i < args_len; i++) /* count null-terminated args */
+		argc += (args_line[i] == '\0');
+	argv = malloc((argc + 1) * sizeof(char *));
+	argv[0] = args_line;
+	for (i = j = 0; i < args_len && j < argc; i++)
+		if (args_line[i] == '\0' && args_line[i + 1] != '\0')
+			argv[++j] = args_line + i + 1;
+	argv[argc] = NULL;
+
+	*argc_adr = argc, *argv_adr = argv;
+}
+
+/**
+ * replace_aliases - replaces shell variables
+ * @line_adr: the address of stored input command line
+ * @len_adr: the address to store the length of the command line
+ * Return: exit status
+ */
+int replace_aliases(char **line_adr, size_t *len_adr)
+{
+	size_t i = 0, res_len, alias_len, len = *len_adr;
+	char c, *result, *query, *line = *line_adr;
+
+	if (_isalpha(line[i]) || line[i] == '_')
+		while ((c = line[i]) && (_isalnum(c) || c == '_' || c == '-'))
+			i++;
+	alias_len = i;
+	if (i == 0)
+		return (FAILURE);
+	query = malloc(6 + alias_len + 1), query[6 + alias_len] = '\0';
+	_strcpy(query, "ALIAS ");
+	for (i = 0; i < alias_len; i++)
+		query[i + 6] = line[i];
+	result = _strdup(_getenv(query));
+	free(query);
+	if (result == NULL)
+		return (FAILURE);
+	_strcpy(result, result + 1);
+	res_len = _strlen(result) - 1;
+	result[res_len] = '\0';
+	if (res_len <= alias_len)
+	{
+		_strcpy(line, result);
+		for (i = alias_len; i <= len; i++)
+			line[i - (alias_len - res_len)] = line[i];
+		*len_adr -= alias_len - res_len;
 	}
 	else
 	{
-		/* check for other commands and check for errors before executing */
+		line = malloc(len + (res_len - alias_len) + 1);
+		_strcpy(line, result);
+		for (i = alias_len; i <= len; i++)
+			line[i - (alias_len - res_len)] = (*line_adr)[i];
+		free(*line_adr);
+		*line_adr = line;
+		*len_adr += res_len - alias_len;
 	}
-	return (1);
-}
-/**
- * prefix_PATH - replaces incomplete argument paths
- * @argv_adr: the address of the arguments array
- * @env: the environment variables array
- * Return: 0 if executed successfully, -1 if an error was encountered
- */
-int prefix_PATH(__attribute__((unused)) char ***argv_adr,
-				__attribute__((unused)) const char **env)
-{
-	/* To be implemented */
-	return (0);
-}
-/**
- * check_variables - replaces incomplete argument paths
- * @argc: the number of passed arguments
- * @argv: the passed arguments array
- * @env: the environment variables array
- * Return: 0 if executed successfully, -1 if an error was encountered
- */
-int check_variables(__attribute__((unused)) int argc,
-					__attribute__((unused)) char **argv,
-					__attribute__((unused)) const char **env)
-{
-	/* To be implemented */
-	return (0);
+	free(result);
+	return (SUCCESS);
 }
