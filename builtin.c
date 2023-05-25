@@ -42,27 +42,30 @@ int shell_env(int argc, char **argv)
 	if (_strcmp(argv[0], "env") == SUCCESS)
 	{
 		if (argc == 1)
-			for (i = 0; global_shell_env[i]; i++)
+		{
+			for (i = SH_VAR_OFFSET; global_shell_env[i]; i++)
 				_puts(global_shell_env[i]), _putchar('\n');
-		return (SUCCESS);
-	} else if (_strcmp(argv[0], "setenv") == SUCCESS)
-	{
-		switch (argc)
-		{
-			case 3:
-				return (_setenv(argv[1], argv[2], 1));
-			default:
-				return (FAILURE);
+			return (SUCCESS);
 		}
-	} else if (_strcmp(argv[0], "unsetenv") == SUCCESS)
+		free(argv[0]),
+		argv[0] = _strdup("correct usage: env");
+		return (STX_ERR);
+	}
+	else if (_strcmp(argv[0], "setenv") == SUCCESS)
 	{
-		switch (argc)
-		{
-			case 2:
-				return (_unsetenv(argv[1]));
-			default:
-				return (FAILURE);
-		}
+		if (argc == 3)
+			return (_setenv(argv[1], argv[2], 1));
+		free(argv[0]),
+		argv[0] = _strdup("correct usage: setenv VARIABLE VALUE");
+		return (STX_ERR);
+	}
+	else if (_strcmp(argv[0], "unsetenv") == SUCCESS)
+	{
+		if (argc == 2)
+			return (_unsetenv(argv[1]));
+		free(argv[0]),
+		argv[0] = _strdup("correct usage: unsetenv VARIABLE");
+		return (STX_ERR);
 	}
 	return (FAILURE);
 }

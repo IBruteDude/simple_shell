@@ -48,12 +48,12 @@ void error(int exec_stat, int lines_read, const char **argv, char **exec_argv)
 	switch (exec_stat)
 	{
 	case FAILURE:
-		err = fmt_string("%s: %d: %s: not found\n",
-			argv[0], lines_read, exec_argv[0]), _setenv("?", "127", 1);
+		err = fmt_string("%s: %s No such file or directory\n",
+			argv[0], exec_argv[0]), _setenv("?", "127", 1);
 		break;
-	case EOF_FAIL:
-		err = fmt_string("%s: %d: Syntax error: Unterminated quoted string\n",
-			argv[0], lines_read), _setenv("?", "2", 1);
+	case EOF_FAIL: case STX_ERR:
+		err = fmt_string("%s: %d: Syntax error: %s\n",
+			argv[0], lines_read, exec_argv[0]), _setenv("?", "2", 1);
 		break;
 	case PERM_DENY:
 		err = fmt_string("%s: %d: %s: Permission denied\n",
@@ -79,7 +79,9 @@ void error(int exec_stat, int lines_read, const char **argv, char **exec_argv)
 	default:
 		err = int_to_str(exec_stat);
 		_setenv("?", err, 1), free(err);
-		err = _strdup("");
+		err = (exec_argv[0]) ? _strdup(exec_argv[0]) : _strdup("");
 	}
-	write(STDERR_FILENO, err, _strlen(err)), free(err);
+	write(STDERR_FILENO, err, _strlen(err));
+	if (exec_stat != STX_ERR)
+		free(err);
 }

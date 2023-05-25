@@ -60,6 +60,38 @@ int get_args(char **args_line_adr, int *args_len_adr,
 	return (lines_read);
 }
 
+
+
+int handle_command_separators(int cmd_count, int lines_read,
+								const char **argv, char **exec_argv)
+{
+	int i, j, k, exec_stat;
+	char separator;
+	
+	j = k = 0;
+	for (i = 0; i < cmd_count; i++)
+	{
+		while (exec_argv[j] && !_strchr(";&|",
+				separator = exec_argv[j][0]))
+				j++;
+		separator = (exec_argv[j]) ? separator : '\0', exec_argv[j] = NULL,
+		exec_stat = search_command(j, exec_argv + k);
+		if (exec_stat == SUCCESS)
+		{
+			_setenv("?", "0", 1);
+			if (separator == '|')
+				break;
+		}
+		else
+		{
+			error(exec_stat, _max(lines_read, 1), argv, exec_argv + k);
+			if (separator == '&')
+				break;
+		}
+		k = ++j;
+	}
+	return (SUCCESS);
+}
 /**
  * shell_main_process - the shell interactive mode REPL
  *
@@ -69,34 +101,28 @@ int get_args(char **args_line_adr, int *args_len_adr,
  */
 int shell_main_process(const char *argv[], FILE *stream)
 {
-	int exec_stat, args_len, exec_argc, lines_read = 0;
+	int parse_stat, args_len, exec_argc, lines_read = 0, sep_cmds;
 	char **exec_argv, *args_line = NULL;
 
 	while (1)
 	{
-		/* signal(SIGINT, signal_handle); */
-		exec_argc = exec_stat = 0;
-		lines_read += get_args(&args_line, &args_len, &exec_stat, stream);
+		signal(SIGINT, signal_handle);
+		exec_argc = parse_stat = 0;
+		lines_read += get_args(&args_line, &args_len, &parse_stat, stream);
 
-		parse_args(args_line, args_len, &exec_argv, &exec_argc);
-		if (exec_stat != BAD_SUB)
+		sep_cmds = parse_args(args_line, args_len, &exec_argv, &exec_argc);
+		if (parse_stat != BAD_SUB && sep_cmds != STX_ERR)
 		{
-			if (exec_stat != PERM_DENY)
-			{
-				if (exec_stat != EOF_FAIL)
-					exec_stat = search_command(exec_argc, exec_argv);
-			}
+			if (parse_stat != PERM_DENY && parse_stat != EOF_FAIL)
+				parse_stat = handle_command_separators(sep_cmds,
+											lines_read, argv, exec_argv);
 			else
-			{
-				if (exec_argv[0])
-					free(exec_argv[0]);
-				exec_argv[0] = args_line = _strdup("");
-			}
+				exec_argv[0] = (parse_stat == PERM_DENY) ? _strdup("") : 
+					_strdup("Unterminated quoted string"); /* EOF_FAIL */
 		}
-		if (exec_stat == SUCCESS)
-			_setenv("?", "0", 1);
-		else
-			error(exec_stat, _max(lines_read, 1), argv, exec_argv);
+		parse_stat = (sep_cmds == STX_ERR) ? STX_ERR : parse_stat;
+		if (parse_stat != SUCCESS)
+			error(parse_stat, _max(lines_read, 1), argv, exec_argv);
 		free(args_line);
 		free(exec_argv);
 	}

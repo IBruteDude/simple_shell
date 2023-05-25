@@ -4,12 +4,14 @@
 #include "main.h"
 #define	PROMPT			"$ "
 #define	DELIMITERS		" \t\n\'\"`$(){}&|;<>"
+#define SH_VAR_OFFSET	17
 #define	BUF_SIZE		1024
 #define	FILE_PATH_MAX	4096
 #ifdef	__linux__
 #undef	FILENAME_MAX
 #define	FILENAME_MAX	256
 #endif
+#define STX_ERR			-2
 #define	FAILURE			-1
 #define	SUCCESS			0
 #define	CRITICAL		1
@@ -23,6 +25,7 @@
 #define	SLASH			"/"
 
 #define EMPTY_COMMAND(s) ((s[0] == s[1]) && (s[0] == '\'' || s[1] == '\"'))
+#define ISNAMECHAR(c) (_isalnum(c) || c == '_' || c == '-')
 #if 0
 /*
 *#define _SHELL_FREE(i, argv)					\
@@ -55,6 +58,8 @@ extern FILE *reading_file;
 
 /* shell_core.c */
 int shell_main_process(const char *argv[], FILE *stream);
+int handle_command_separators(int cmd_count, int lines_read,
+								const char **argv, char **exec_argv);
 int get_args(char **args_line_adr, int *args_len_adr,
 				int *input_flag_adr, FILE *stream);
 int shell_free(int exit_status, char **argv);
@@ -72,7 +77,7 @@ void error(int exec_stat, int lines_read, const char **argv, char **exec_argv);
 
 /* argument_processing.c */
 int process_args(const char *raw_input, char *cmd_line, int *len_adr);
-void parse_args(char *args_line, int args_len,
+int parse_args(char *args_line, int args_len,
 				char ***argv_adr, int *argc_adr);
 int replace_aliases(char **line_adr, size_t *len_adr);
 

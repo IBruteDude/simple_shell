@@ -16,6 +16,15 @@ const char *_getenv(char *variable)
 		while (global_shell_env[start_idx])
 			start_idx++;
 		start_idx++;
+	} else if (_strcmp(variable, "SHELL") == ' ')
+	{
+		variable = _strchr(variable, ' ') + 1;
+		while (global_shell_env[start_idx])
+			start_idx++;
+		start_idx++;
+		while (global_shell_env[start_idx])
+			start_idx++;
+		start_idx++;
 	}
 	len = _strlen(variable);
 	for (index = start_idx; global_shell_env[index] != NULL; index++)

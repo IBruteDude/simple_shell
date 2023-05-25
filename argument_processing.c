@@ -3,7 +3,7 @@
 /**
  * process_args - processes special characters
  * @cmd_line: the raw stdin read input
- * @args_line: the null-separated arguments string
+ * @line: the null-separated arguments string
  * @len_adr: the address to store the number of arguments
  * Return: exit status
  */
@@ -15,10 +15,10 @@ int process_args(const char *cmd_line, char *args_line, int *len_adr)
 	while (1)
 		switch (c = cmd_line[r_idx++])
 		{
-		case ' ': case '\t':
-			args_line[w_idx++] = (escaped || doub_q || sing_q) ? c : '\0';
-			escaped = false;
-			while (cmd_line[r_idx] == ' ')
+		case ' ': case '\t': case ';':
+			args_line[w_idx] = (escaped || doub_q || sing_q) ? c : '\0';
+			escaped = false, w_idx += (w_idx > *len_adr - 1);
+			while (cmd_line[r_idx] == ' ' || cmd_line[r_idx] == '\t')
 				r_idx++;
 			break;
 		case '\\':
@@ -57,22 +57,49 @@ int process_args(const char *cmd_line, char *args_line, int *len_adr)
  * @args_len: the length of the arguments line
  * @argv_adr: the address to store the parsed arguments
  * @argc_adr: the address to store the number of arguments
+ * Return: number of separated commands
  */
-void parse_args(char *args_line, int args_len, char ***argv_adr, int *argc_adr)
+int parse_args(char *line, int args_len, char ***argv_adr, int *argc_adr)
 {
-	int argc, i, j;
-	char **argv;
+	int argc, i, j, command_separators = 1;
+	char **argv, cc[3];
 
 	for (argc = i = 0; i < args_len; i++) /* count null-terminated args */
-		argc += (args_line[i] == '\0');
+		argc += (line[i] == '\0');
 	argv = malloc((argc + 1) * sizeof(char *));
-	argv[0] = args_line;
+	argv[0] = line;
 	for (i = j = 0; i < args_len && j < argc; i++)
-		if (args_line[i] == '\0' && args_line[i + 1] != '\0')
-			argv[++j] = args_line + i + 1;
-	argv[argc] = NULL;
-
-	*argc_adr = argc, *argv_adr = argv;
+	{
+		if (_strchr(";&|", line[i]) != NULL)
+		{
+			if (line[i] == '&' || line[i] == '|')
+			{
+				i++;
+				if (line[i - 1] != line[i])
+				{
+					(*argv_adr)[0] = _strdup("only && and || are valid"),
+					(*argv_adr)[1] = NULL, *argc_adr = 1;
+					return (STX_ERR);
+				}
+			}
+			i++;
+			if (line[i] != '\0')
+				if(_puti(line[i + 1]) && (!ISNAMECHAR(line[i]) || !ISNAMECHAR(line[i + 1])))
+				{
+					cc[0] = line[i], cc[1] = '\0';
+					if(!ISNAMECHAR(line[i + 1]) && line[i] == line[i + 1])
+						cc[1] = line[i + 1], cc[2] = '\0';
+					(*argv_adr)[0] = fmt_string("\"%s\" unexpected", cc),
+					(*argv_adr)[1] = NULL, *argc_adr = 1;
+					return (STX_ERR);
+				}
+			command_separators++;
+		}
+		if (line[i] == '\0' && line[i + 1] != '\0')
+			argv[++j] = line + i + 1;
+	}
+	argv[argc] = NULL, *argc_adr = argc, *argv_adr = argv;
+	return (command_separators);
 }
 
 /**
