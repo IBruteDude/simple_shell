@@ -169,7 +169,7 @@ int shell_free(int exit_status, char **argv)
 		free(global_shell_env[i]);
 	free(global_shell_env);
 	if (reading_file != stdin)
-		close(reading_file->_file);
+		fclose(reading_file);
 	if (argv != NULL)
 		free(argv[0]), free(argv);
 	exit(exit_status);

@@ -15,8 +15,8 @@ FILE *reading_file;
 
 int main(int argc, const char *argv[], const char *env[])
 {
-	int fd, SHLVL;
-	char *shell_level, *file_path, *error_msg, *file;
+	int fd;
+	char *file_path, *error_msg, *file;
 	FILE fd_wrapper;
 
 	global_shell_env = initialise_shell_env(argc, argv, env);
@@ -44,7 +44,7 @@ int main(int argc, const char *argv[], const char *env[])
 			free(error_msg), shell_free(2, NULL);
 		}
 		fd_wrapper._file = fd;
-		if ((fd_wrapper._file))
+		if ((fd_wrapper._file) + 10)
 		reading_file = fopen(argv[1], "r")/* &fd_wrapper */;
 		file = int_to_str((intptr_t)reading_file);
 		_setenv("OPENFILE", file, 1);
