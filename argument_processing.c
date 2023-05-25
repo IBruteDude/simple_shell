@@ -3,7 +3,7 @@
 /**
  * process_args - processes special characters
  * @cmd_line: the raw stdin read input
- * @line: the null-separated arguments string
+ * @args_line: the null-separated arguments string
  * @len_adr: the address to store the number of arguments
  * Return: exit status
  */
@@ -15,7 +15,7 @@ int process_args(const char *cmd_line, char *args_line, int *len_adr)
 	while (1)
 		switch (c = cmd_line[r_idx++])
 		{
-		case ' ': case '\t': case ';':
+		case ' ': case '\t':
 			args_line[w_idx] = (escaped || doub_q || sing_q) ? c : '\0';
 			escaped = false, w_idx += (w_idx > *len_adr - 1);
 			while (cmd_line[r_idx] == ' ' || cmd_line[r_idx] == '\t')
@@ -53,7 +53,7 @@ int process_args(const char *cmd_line, char *args_line, int *len_adr)
 
 /**
  * parse_args - parses the command line arguments into argv array
- * @args_line: the input null-separated arguments line
+ * @line: the input null-separated arguments line
  * @args_len: the length of the arguments line
  * @argv_adr: the address to store the parsed arguments
  * @argc_adr: the address to store the number of arguments
@@ -66,7 +66,7 @@ int parse_args(char *line, int args_len, char ***argv_adr, int *argc_adr)
 
 	for (argc = i = 0; i < args_len; i++) /* count null-terminated args */
 		argc += (line[i] == '\0');
-	argv = malloc((argc + 1) * sizeof(char *));
+	argv = calloc((argc + 1), sizeof(char *));
 	argv[0] = line;
 	for (i = j = 0; i < args_len && j < argc; i++)
 	{
@@ -84,10 +84,10 @@ int parse_args(char *line, int args_len, char ***argv_adr, int *argc_adr)
 			}
 			i++;
 			if (line[i] != '\0')
-				if(_puti(line[i + 1]) && (!ISNAMECHAR(line[i]) || !ISNAMECHAR(line[i + 1])))
+				if (!ISNAMECHAR(line[i]) || !ISNAMECHAR(line[i + 1]))
 				{
 					cc[0] = line[i], cc[1] = '\0';
-					if(!ISNAMECHAR(line[i + 1]) && line[i] == line[i + 1])
+					if (!ISNAMECHAR(line[i + 1]) && line[i] == line[i + 1])
 						cc[1] = line[i + 1], cc[2] = '\0';
 					(*argv_adr)[0] = fmt_string("\"%s\" unexpected", cc),
 					(*argv_adr)[1] = NULL, *argc_adr = 1;

@@ -77,9 +77,8 @@ void error(int exec_stat, int lines_read, const char **argv, char **exec_argv)
 			argv[0], lines_read, exec_argv[0]), _setenv("?", "127", 1);
 		break;
 	default:
-		err = int_to_str(exec_stat);
-		_setenv("?", err, 1), free(err);
-		err = (exec_argv[0]) ? _strdup(exec_argv[0]) : _strdup("");
+		err = int_to_str(exec_stat), _setenv("?", err, 1), free(err);
+		err = _strdup("");
 	}
 	write(STDERR_FILENO, err, _strlen(err));
 	if (exec_stat != STX_ERR)

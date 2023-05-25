@@ -16,15 +16,15 @@ int replace_variables(char **line_adr, size_t *len_adr)
 	stat = detect_variables(line, len + 1, &var_count, is_var_place);
 	if (stat == BAD_SUB)
 		return (stat);
-	vals = malloc((var_count + 1) * sizeof(char *));
-	lens = malloc((var_count + 1) * sizeof(size_t));
+	vals = calloc((var_count + 1), sizeof(char *));
+	lens = calloc((var_count + 1), sizeof(size_t));
 	vals[var_count] = NULL, lens[var_count] = 0;
 	for (v_idx = r_idx = 0; v_idx < (ssize_t) var_count &&
 			r_idx < (ssize_t) *len_adr - 1; r_idx++)
 		if (is_var_place[r_idx])
 			vals[v_idx] = get_var(line + r_idx, lens + v_idx),
 			len += (_strlen(vals[v_idx]) - lens[v_idx]), v_idx++;
-	line = malloc(len + 2);
+	line = calloc(len + 2, sizeof(char));
 	for (r_idx = w_idx = v_idx = 0; (*line_adr)[r_idx]; r_idx++)
 		if (is_var_place[r_idx])
 			_strcpy(line + w_idx, vals[v_idx]), w_idx += _strlen(vals[v_idx]),

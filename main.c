@@ -16,7 +16,7 @@ FILE *reading_file;
 int main(int argc, const char *argv[], const char *env[])
 {
 	int fd, SHLVL;
-	char *shell_level, *file_path, *error_msg;
+	char *shell_level, *file_path, *error_msg, *file;
 	FILE fd_wrapper;
 
 	global_shell_env = initialise_shell_env(argc, argv, env);
@@ -35,23 +35,20 @@ int main(int argc, const char *argv[], const char *env[])
 			file_path = _strdup(argv[1]);
 		}
 		fd = open(file_path, O_RDONLY);
+		free(file_path);
 		if (fd == -1)
 		{
 			error_msg = fmt_string("%s: %d: cannot open %s: No such file\n",
 					argv[0], 0, argv[1]);
 			write(STDERR_FILENO, error_msg, _strlen(error_msg));
-			free(error_msg), free(file_path), shell_free(2, NULL);
+			free(error_msg), shell_free(2, NULL);
 		}
 		fd_wrapper._file = fd;
 		if ((fd_wrapper._file))
 		reading_file = fopen(argv[1], "r")/* &fd_wrapper */;
-		if (_getenv("SHLVL") != NULL)
-		{
-			SHLVL = str_to_int(_getenv("SHLVL"));
-			shell_level = int_to_str(SHLVL + 1);
-			_setenv("SHLVL", shell_level, 1);
-			free(shell_level);
-		}
+		file = int_to_str((intptr_t)reading_file);
+		_setenv("OPENFILE", file, 1);
+		free(file);
 	}
 	return (shell_main_process(argv, reading_file));
 }

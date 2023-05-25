@@ -44,12 +44,21 @@ do { \
 	}	\
 } while (0)
 
+#define init_malloc(p, s) \
+do { \
+	typeof(s) _FOO_i = 0; \
+	\
+	p = malloc(s); \
+	while (_FOO_i < s) \
+		p[_FOO_i++] = '\0'; \
+} while (0)
+
 /* One-line string functions why not?! */
 #define _strcat(dest, src) _strcpy((dest) + _strlen(dest), (src))
 #define _strdup(s) \
 	((s) == NULL ? \
 	NULL : \
-	_strcpy(malloc((_strlen(s)) + 1), (s)))
+	_strcpy(calloc((_strlen(s)) + 1, sizeof(char)), (s)))
 /* library_functions.c */
 size_t _strlen(const char *str);
 char *_strcpy(char *dest, const char *src);

@@ -17,8 +17,8 @@ int get_args(char **args_line_adr, int *args_len_adr,
 	size_t command_len = BUF_SIZE;
 	char *command_line, *args_line;
 
-	args_line = malloc(1), command_line = malloc(BUF_SIZE);
-	*args_line = *command_line = '\0';
+	args_line = malloc(1), *args_line = '\0';
+	init_malloc(command_line, BUF_SIZE);
 	if (isatty(stream->_file))
 		write(STDOUT_FILENO, PROMPT, sizeof(PROMPT) - 1);
 	do {
@@ -42,38 +42,40 @@ int get_args(char **args_line_adr, int *args_len_adr,
 		else
 			parse_stat = process_args(command_line, args_line, &args_len);
 		if ((parse_stat == LINE_ERROR || parse_stat == BAD_SUB) && !EOF_flag)
-		 	write(STDOUT_FILENO, "> ", (isatty(stream->_file)) ? 2 : 0);
+			write(STDOUT_FILENO, "> ", (isatty(stream->_file)) ? 2 : 0);
 	} while ((parse_stat == LINE_ERROR || parse_stat == BAD_SUB) && !EOF_flag);
-	if (EMPTY_COMMAND(command_line))
-		parse_stat = PERM_DENY;
-	if (parse_stat == LINE_ERROR && EOF_flag == true)
-	{
-		parse_stat = EOF_FAIL;
-		if (command_line[command_len - 1] == '\'')
-			args_line[args_len++] = '\'', args_line[args_len] = '\0';
-	}
-	if (Bad_substitution)
-		parse_stat = BAD_SUB;
-	free(command_line);
-	*input_flag_adr = parse_stat;
+	parse_stat = (EMPTY_COMMAND(command_line)) ? PERM_DENY : parse_stat;
+	parse_stat = (parse_stat == LINE_ERROR && EOF_flag == true) ? EOF_FAIL :
+		parse_stat; if (command_line[command_len - 1] == '\'' && EOF_flag)
+		args_line[args_len++] = '\'', args_line[args_len] = '\0';
+	parse_stat = (Bad_substitution) ? BAD_SUB : parse_stat;
+	free(command_line), *input_flag_adr = parse_stat;
 	*args_line_adr = args_line, *args_len_adr = args_len;
 	return (lines_read);
 }
 
 
-
+/**
+ * handle_command_separators - it handles separated input commands
+ *
+ * @cmd_count: number of input commands
+ * @lines_read: number of lines read
+ * @argv: the shell's passed arguments
+ * @exec_argv: the command arguments array
+ * Return: successful parse status
+ */
 int handle_command_separators(int cmd_count, int lines_read,
 								const char **argv, char **exec_argv)
 {
 	int i, j, k, exec_stat;
 	char separator;
-	
+
 	j = k = 0;
 	for (i = 0; i < cmd_count; i++)
 	{
 		while (exec_argv[j] && !_strchr(";&|",
-				separator = exec_argv[j][0]))
-				j++;
+			separator = exec_argv[j][0]))
+			j++;
 		separator = (exec_argv[j]) ? separator : '\0', exec_argv[j] = NULL,
 		exec_stat = search_command(j, exec_argv + k);
 		if (exec_stat == SUCCESS)
@@ -117,7 +119,7 @@ int shell_main_process(const char *argv[], FILE *stream)
 				parse_stat = handle_command_separators(sep_cmds,
 											lines_read, argv, exec_argv);
 			else
-				exec_argv[0] = (parse_stat == PERM_DENY) ? _strdup("") : 
+				exec_argv[0] = (parse_stat == PERM_DENY) ? _strdup("") :
 					_strdup("Unterminated quoted string"); /* EOF_FAIL */
 		}
 		parse_stat = (sep_cmds == STX_ERR) ? STX_ERR : parse_stat;
@@ -138,8 +140,8 @@ void signal_handle(int sig)
 	switch (sig)
 	{
 	case SIGINT:
-		_putchar('\n');
-		write(STDOUT_FILENO, PROMPT, sizeof(PROMPT) - 1);
+		if (isatty(stdin->_file))
+		_putchar('\n'), write(STDOUT_FILENO, PROMPT, sizeof(PROMPT) - 1);
 		break;
 	case SIGTERM:
 		exit(0);

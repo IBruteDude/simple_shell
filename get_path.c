@@ -93,28 +93,34 @@ int sepPath(char **args)
 {
 	char *full_path;
 	pid_t mypid;
-	int state;
+	int state, entry;
 
 	full_path = check_exec(args[0]);
 	if (full_path == NULL)
 		return (FAILURE);
-	mypid = fork();
-	if (mypid == 0)
+	entry = access(full_path, F_OK);
+	if (entry != access(full_path, F_OK | X_OK | R_OK))
+		return (PERM_DENY);
+	if (entry == 0)
 	{
-		execve(full_path, args, (char * const*)global_shell_env);
-		free(full_path), shell_free(FAILURE, args);
-	}
-	else if (mypid == -1)
-	{
-		perror("Error: forking failed\n"),
-		shell_free(EXIT_FAILURE, args);
-	}
-	else
-	{
-		free(full_path);
-		wait(&state);
-		if (WIFEXITED(state))
-			return (WEXITSTATUS(state));
+		mypid = fork();
+		if (mypid == 0)
+		{
+			execve(full_path, args, (char * const*)global_shell_env);
+			free(full_path), shell_free(FAILURE, args);
+		}
+		else if (mypid == -1)
+		{
+			perror("Error: forking failed\n"),
+			shell_free(EXIT_FAILURE, args);
+		}
+		else
+		{
+			free(full_path);
+			wait(&state);
+			if (WIFEXITED(state))
+				return (WEXITSTATUS(state));
+		}
 	}
 	return (FAILURE);
 }
@@ -126,7 +132,6 @@ int sepPath(char **args)
  * @argv: user-given arguments
  * Return: out
  */
-
 int search_command(int argc, char **argv)
 {
 	int entry, state;
@@ -141,14 +146,16 @@ int search_command(int argc, char **argv)
 	state = check_builtin_commands(argc, argv);
 	if (state != FAILURE)
 		return (state);
-	entry = access(argv[0], F_OK | X_OK | R_OK);
+	entry = access(argv[0], F_OK);
+	if (entry != access(argv[0], F_OK | X_OK | R_OK))
+		return (PERM_DENY);
 	if (entry == 0)
 	{
 		mypid = fork();
 		if (mypid == 0)
 		{
 			execve(argv[0], argv, (char * const*)global_shell_env);
-			free(argv[0]), free(argv), exit(FAILURE);
+			shell_free(FAILURE, argv);
 		}
 		else if (mypid == -1)
 		{
